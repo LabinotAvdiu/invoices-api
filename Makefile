@@ -1,4 +1,4 @@
-.PHONY: help up down build exec install migrate key-generate logs restart clean
+.PHONY: help up down build exec install migrate key-generate logs restart clean test
 
 # Variables
 CONTAINER_APP = invoices_app
@@ -71,8 +71,25 @@ logs-mysql: ## Affiche les logs du container mysql
 artisan: ## Exécute une commande artisan (usage: make artisan cmd="migrate:status")
 	docker compose exec app php artisan $(cmd)
 
-test: ## Exécute les tests
-	docker compose exec app php artisan test
+fix-permissions: ## Corrige les permissions des fichiers pour l'utilisateur hôte
+	@echo "🔧 Correction des permissions de toute l'application..."
+	@docker compose exec app chown -R $(shell id -u):$(shell id -g) /var/www/html
+	@docker compose exec app find /var/www/html -type f -exec chmod 664 {} \;
+	@docker compose exec app find /var/www/html -type d -exec chmod 775 {} \;
+	@docker compose exec app chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+	@docker compose exec app chmod +x /var/www/html/artisan
+	@echo "✅ Permissions corrigées pour toute l'application !"
+
+sync-from-host: ## Synchronise les fichiers depuis l'hôte vers le conteneur (force l'écriture)
+	@echo "🔄 Synchronisation des fichiers depuis l'hôte..."
+	@echo "⚠️  Note: Les volumes Docker synchronisent automatiquement, cette commande force la mise à jour des timestamps"
+	@find . -type f -name "*.php" -exec touch {} \;
+	@make fix-permissions
+	@echo "✅ Synchronisation terminée !"
+
+test: ## Exécute tous les tests
+	@echo "🧪 Exécution des tests..."
+	@docker compose exec app php artisan test
 
 cache-clear: ## Vide le cache
 	docker compose exec app php artisan cache:clear
