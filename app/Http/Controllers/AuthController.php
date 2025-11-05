@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\ResponseCode;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
 use App\Http\Resources\UserResource;
@@ -35,11 +34,7 @@ class AuthController extends Controller
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        return response()->json([
-            'code' => ResponseCode::REGISTER_SUCCESS,
-            'user' => new UserResource($user),
-            'token' => $token,
-        ], 201);
+        return UserResource::make($user)->additional(['token' => $token])->response()->setStatusCode(201);
     }
 
     /**
@@ -57,11 +52,7 @@ class AuthController extends Controller
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        return response()->json([
-            'code' => ResponseCode::LOGIN_SUCCESS,
-            'user' => new UserResource($user),
-            'token' => $token,
-        ]);
+        return UserResource::make($user)->additional(['token' => $token])->response();
     }
 
     /**
@@ -71,8 +62,6 @@ class AuthController extends Controller
     {
         $request->user()->currentAccessToken()->delete();
 
-        return response()->json([
-            'code' => ResponseCode::LOGOUT_SUCCESS,
-        ]);
+        return response()->json([], 204);
     }
 }

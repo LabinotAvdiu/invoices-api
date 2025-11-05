@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Enums\ResponseCode;
 use App\Enums\CompanyType;
 use App\Models\Attachment;
 use App\Models\Company;
@@ -80,16 +79,14 @@ class CompanyTest extends TestCase
 
         $response->assertStatus(201)
             ->assertJsonStructure([
-                'code',
-                'company' => [
+                'data' => [
                     'id',
                     'name',
                     'logo',
                 ],
             ])
             ->assertJson([
-                'code' => ResponseCode::COMPANY_CREATED,
-                'company' => [
+                'data' => [
                     'name' => 'Test Company',
                 ],
             ]);
@@ -124,8 +121,7 @@ class CompanyTest extends TestCase
 
         $response->assertStatus(201)
             ->assertJson([
-                'code' => ResponseCode::COMPANY_CREATED,
-                'company' => [
+                'data' => [
                     'name' => 'Complete Company',
                     'legal_form' => 'SARL',
                     'siret' => '12345678901234',
@@ -162,8 +158,7 @@ class CompanyTest extends TestCase
 
         $response->assertStatus(201)
             ->assertJsonStructure([
-                'code',
-                'company' => [
+                'data' => [
                     'id',
                     'name',
                     'logo' => [
@@ -198,15 +193,13 @@ class CompanyTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJsonStructure([
-                'code',
-                'company' => [
+                'data' => [
                     'id',
                     'name',
                 ],
             ])
             ->assertJson([
-                'code' => ResponseCode::SUCCESS,
-                'company' => [
+                'data' => [
                     'id' => $company->id,
                     'name' => 'Viewable Company',
                 ],
@@ -238,8 +231,7 @@ class CompanyTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJson([
-                'code' => ResponseCode::COMPANY_UPDATED,
-                'company' => [
+                'data' => [
                     'id' => $company->id,
                     'name' => 'Updated Name',
                     'city' => 'Paris',
@@ -367,11 +359,7 @@ class CompanyTest extends TestCase
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->deleteJson("/api/companies/{$company->id}");
 
-        $response->assertStatus(200)
-            ->assertJson([
-                'code' => ResponseCode::COMPANY_DELETED,
-                'message' => 'Company deleted successfully',
-            ]);
+        $response->assertStatus(204);
 
         $this->assertDatabaseMissing('companies', [
             'id' => $company->id,

@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Enums\ResponseCode;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -27,8 +26,7 @@ class AuthTest extends TestCase
 
         $response->assertStatus(201)
             ->assertJsonStructure([
-                'code',
-                'user' => [
+                'data' => [
                     'id',
                     'first_name',
                     'last_name',
@@ -43,8 +41,7 @@ class AuthTest extends TestCase
                 'token',
             ])
             ->assertJson([
-                'code' => ResponseCode::REGISTER_SUCCESS,
-                'user' => [
+                'data' => [
                     'first_name' => 'John',
                     'last_name' => 'Doe',
                     'email' => 'john@example.com',
@@ -81,8 +78,7 @@ class AuthTest extends TestCase
 
         $response->assertStatus(201)
             ->assertJson([
-                'code' => ResponseCode::REGISTER_SUCCESS,
-                'user' => [
+                'data' => [
                     'first_name' => 'Jane',
                     'last_name' => 'Smith',
                     'email' => 'jane@example.com',
@@ -241,8 +237,7 @@ class AuthTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJsonStructure([
-                'code',
-                'user' => [
+                'data' => [
                     'id',
                     'first_name',
                     'last_name',
@@ -256,8 +251,7 @@ class AuthTest extends TestCase
                 'token',
             ])
             ->assertJson([
-                'code' => ResponseCode::LOGIN_SUCCESS,
-                'user' => [
+                'data' => [
                     'id' => $user->id,
                     'email' => 'john@example.com',
                 ],
@@ -380,10 +374,7 @@ class AuthTest extends TestCase
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->postJson('/api/logout');
 
-        $response->assertStatus(200)
-            ->assertJson([
-                'code' => ResponseCode::LOGOUT_SUCCESS,
-            ]);
+        $response->assertStatus(204);
 
         $this->assertDatabaseMissing('personal_access_tokens', [
             'tokenable_id' => $user->id,

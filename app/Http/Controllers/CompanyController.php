@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Enums\CompanyType;
-use App\Enums\ResponseCode;
 use App\Http\Requests\StoreCompanyRequest;
 use App\Http\Requests\UpdateCompanyRequest;
 use App\Http\Resources\CompanyResource;
@@ -49,10 +48,7 @@ class CompanyController extends Controller
 
         $company->load('logo');
 
-        return response()->json([
-            'code' => ResponseCode::COMPANY_CREATED,
-            'company' => new CompanyResource($company),
-        ], 201);
+        return CompanyResource::make($company)->response()->setStatusCode(201);
     }
 
     /**
@@ -62,10 +58,7 @@ class CompanyController extends Controller
     {
         $company->load('logo');
 
-        return response()->json([
-            'code' => ResponseCode::SUCCESS,
-            'company' => new CompanyResource($company),
-        ]);
+        return CompanyResource::make($company)->response();
     }
 
     /**
@@ -88,10 +81,7 @@ class CompanyController extends Controller
 
         $company->load('logo');
 
-        return response()->json([
-            'code' => ResponseCode::COMPANY_UPDATED,
-            'company' => new CompanyResource($company),
-        ]);
+        return CompanyResource::make($company)->response();
     }
 
     /**
@@ -128,10 +118,7 @@ class CompanyController extends Controller
         // Logo deletion is handled automatically in the Company model's deleting event
         $company->delete();
 
-        return response()->json([
-            'code' => ResponseCode::COMPANY_DELETED,
-            'message' => 'Company deleted successfully',
-        ]);
+        return response()->json([], 204);
     }
 }
 
