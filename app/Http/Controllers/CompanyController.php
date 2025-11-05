@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\CompanyType;
 use App\Enums\ResponseCode;
 use App\Http\Requests\StoreCompanyRequest;
 use App\Http\Requests\UpdateCompanyRequest;
@@ -35,6 +36,11 @@ class CompanyController extends Controller
         unset($validated['logo']);
 
         $company = Company::create($validated);
+
+        // If customer type, attach to the authenticated user
+        if ($company->type === CompanyType::CUSTOMER) {
+            $company->users()->attach($request->user()->id);
+        }
 
         // Handle logo upload if provided
         if ($logoFile) {

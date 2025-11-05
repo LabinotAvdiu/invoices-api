@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\ResponseCode;
+use App\Enums\CompanyType;
 use App\Models\Attachment;
 use App\Models\Company;
 use App\Models\User;
@@ -70,7 +71,11 @@ class CompanyTest extends TestCase
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->postJson('/api/companies', [
+                'type' => 'customer',
                 'name' => 'Test Company',
+                'address' => '123 Main Street',
+                'zip_code' => '75001',
+                'city' => 'Paris',
             ]);
 
         $response->assertStatus(201)
@@ -103,6 +108,7 @@ class CompanyTest extends TestCase
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->postJson('/api/companies', [
+                'type' => 'customer',
                 'name' => 'Complete Company',
                 'legal_form' => 'SARL',
                 'siret' => '12345678901234',
@@ -146,7 +152,11 @@ class CompanyTest extends TestCase
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->postJson('/api/companies', [
+                'type' => 'customer',
                 'name' => 'Company with Logo',
+                'address' => '123 Main Street',
+                'zip_code' => '75001',
+                'city' => 'Paris',
                 'logo' => $logo,
             ]);
 
@@ -208,15 +218,21 @@ class CompanyTest extends TestCase
      */
     public function test_user_can_update_company(): void
     {
+        $user = User::factory()->create();
+        $token = $user->createToken('test-token')->plainTextToken;
+        
         $company = Company::factory()->create([
+            'type' => CompanyType::CUSTOMER->value,
             'name' => 'Original Name',
             'city' => 'Lyon',
         ]);
-        $token = $this->getAuthToken();
+        $company->users()->attach($user->id);
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->putJson("/api/companies/{$company->id}", [
                 'name' => 'Updated Name',
+                'address' => '456 New Street',
+                'zip_code' => '69001',
                 'city' => 'Paris',
             ]);
 
@@ -243,14 +259,22 @@ class CompanyTest extends TestCase
     public function test_user_can_update_company_logo(): void
     {
         Storage::fake('public');
-        $company = Company::factory()->create();
-        $token = $this->getAuthToken();
+        $user = User::factory()->create();
+        $token = $user->createToken('test-token')->plainTextToken;
+        
+        $company = Company::factory()->create([
+            'type' => CompanyType::CUSTOMER->value,
+        ]);
+        $company->users()->attach($user->id);
 
         // Create initial logo
         $oldLogo = UploadedFile::fake()->create('old-logo.jpg', 100, 'image/jpeg');
         $this->withHeader('Authorization', 'Bearer ' . $token)
             ->putJson("/api/companies/{$company->id}", [
                 'name' => $company->name,
+                'address' => $company->address,
+                'zip_code' => $company->zip_code,
+                'city' => $company->city,
                 'logo' => $oldLogo,
             ]);
 
@@ -263,6 +287,9 @@ class CompanyTest extends TestCase
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->putJson("/api/companies/{$company->id}", [
                 'name' => $company->name,
+                'address' => $company->address,
+                'zip_code' => $company->zip_code,
+                'city' => $company->city,
                 'logo' => $newLogo,
             ]);
 
@@ -281,14 +308,22 @@ class CompanyTest extends TestCase
     public function test_old_logo_is_deleted_when_new_logo_uploaded(): void
     {
         Storage::fake('public');
-        $company = Company::factory()->create();
-        $token = $this->getAuthToken();
+        $user = User::factory()->create();
+        $token = $user->createToken('test-token')->plainTextToken;
+        
+        $company = Company::factory()->create([
+            'type' => CompanyType::CUSTOMER->value,
+        ]);
+        $company->users()->attach($user->id);
 
         // Create initial logo
         $oldLogo = UploadedFile::fake()->create('old-logo.jpg', 100, 'image/jpeg');
         $this->withHeader('Authorization', 'Bearer ' . $token)
             ->putJson("/api/companies/{$company->id}", [
                 'name' => $company->name,
+                'address' => $company->address,
+                'zip_code' => $company->zip_code,
+                'city' => $company->city,
                 'logo' => $oldLogo,
             ]);
 
@@ -301,6 +336,9 @@ class CompanyTest extends TestCase
         $this->withHeader('Authorization', 'Bearer ' . $token)
             ->putJson("/api/companies/{$company->id}", [
                 'name' => $company->name,
+                'address' => $company->address,
+                'zip_code' => $company->zip_code,
+                'city' => $company->city,
                 'logo' => $newLogo,
             ]);
 
@@ -346,14 +384,22 @@ class CompanyTest extends TestCase
     public function test_company_deletion_deletes_logo(): void
     {
         Storage::fake('public');
-        $company = Company::factory()->create();
-        $token = $this->getAuthToken();
+        $user = User::factory()->create();
+        $token = $user->createToken('test-token')->plainTextToken;
+        
+        $company = Company::factory()->create([
+            'type' => CompanyType::CUSTOMER->value,
+        ]);
+        $company->users()->attach($user->id);
 
         // Create logo
         $logo = UploadedFile::fake()->create('logo.jpg', 100, 'image/jpeg');
         $this->withHeader('Authorization', 'Bearer ' . $token)
             ->putJson("/api/companies/{$company->id}", [
                 'name' => $company->name,
+                'address' => $company->address,
+                'zip_code' => $company->zip_code,
+                'city' => $company->city,
                 'logo' => $logo,
             ]);
 
@@ -390,12 +436,23 @@ class CompanyTest extends TestCase
      */
     public function test_creation_requires_unique_name(): void
     {
-        Company::factory()->create(['name' => 'Existing Company']);
-        $token = $this->getAuthToken();
+        $user = User::factory()->create();
+        $token = $user->createToken('test-token')->plainTextToken;
+        
+        // Create a company attached to this user
+        $existingCompany = Company::factory()->create([
+            'type' => CompanyType::CUSTOMER->value,
+            'name' => 'Existing Company',
+        ]);
+        $existingCompany->users()->attach($user->id);
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->postJson('/api/companies', [
+                'type' => 'customer',
                 'name' => 'Existing Company',
+                'address' => '123 Main Street',
+                'zip_code' => '75001',
+                'city' => 'Paris',
             ]);
 
         $response->assertStatus(422)
@@ -412,7 +469,11 @@ class CompanyTest extends TestCase
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->postJson('/api/companies', [
+                'type' => 'customer',
                 'name' => 'Test Company',
+                'address' => '123 Main Street',
+                'zip_code' => '75001',
+                'city' => 'Paris',
                 'logo' => $file,
             ]);
 
@@ -431,7 +492,11 @@ class CompanyTest extends TestCase
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->postJson('/api/companies', [
+                'type' => 'customer',
                 'name' => 'Test Company',
+                'address' => '123 Main Street',
+                'zip_code' => '75001',
+                'city' => 'Paris',
                 'logo' => $largeFile,
             ]);
 
@@ -448,7 +513,11 @@ class CompanyTest extends TestCase
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->postJson('/api/companies', [
+                'type' => 'customer',
                 'name' => 'Test Company',
+                'address' => '123 Main Street',
+                'zip_code' => '75001',
+                'city' => 'Paris',
                 'siret' => '123', // Invalid: must be 14 digits
             ]);
 
@@ -465,7 +534,11 @@ class CompanyTest extends TestCase
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->postJson('/api/companies', [
+                'type' => 'customer',
                 'name' => 'Test Company',
+                'address' => '123 Main Street',
+                'zip_code' => '75001',
+                'city' => 'Paris',
                 'legal_form' => 'INVALID',
             ]);
 
@@ -482,7 +555,11 @@ class CompanyTest extends TestCase
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->postJson('/api/companies', [
+                'type' => 'customer',
                 'name' => 'Test Company',
+                'address' => '123 Main Street',
+                'zip_code' => '75001',
+                'city' => 'Paris',
                 'email' => 'invalid-email',
             ]);
 
@@ -538,6 +615,102 @@ class CompanyTest extends TestCase
 
         $this->assertEquals(3, $user->companies()->count());
         $this->assertTrue($user->companies->contains($companies->first()));
+    }
+
+    /**
+     * Test issuer scope filters only issuer companies
+     */
+    public function test_issuer_scope_filters_issuer_companies(): void
+    {
+        // Create 3 issuer companies
+        Company::factory()->count(3)->create([
+            'type' => CompanyType::ISSUER->value,
+        ]);
+
+        // Create 2 customer companies
+        Company::factory()->count(2)->create([
+            'type' => CompanyType::CUSTOMER->value,
+        ]);
+
+        $issuerCompanies = Company::issuer()->get();
+
+        $this->assertEquals(3, $issuerCompanies->count());
+        $issuerCompanies->each(function ($company) {
+            $this->assertEquals(CompanyType::ISSUER->value, $company->type->value);
+        });
+    }
+
+    /**
+     * Test customer scope filters only customer companies
+     */
+    public function test_customer_scope_filters_customer_companies(): void
+    {
+        // Create 2 issuer companies
+        Company::factory()->count(2)->create([
+            'type' => CompanyType::ISSUER->value,
+        ]);
+
+        // Create 4 customer companies
+        Company::factory()->count(4)->create([
+            'type' => CompanyType::CUSTOMER->value,
+        ]);
+
+        $customerCompanies = Company::customer()->get();
+
+        $this->assertEquals(4, $customerCompanies->count());
+        $customerCompanies->each(function ($company) {
+            $this->assertEquals(CompanyType::CUSTOMER->value, $company->type->value);
+        });
+    }
+
+    /**
+     * Test issuer scope can be combined with other query methods
+     */
+    public function test_issuer_scope_can_be_combined_with_other_queries(): void
+    {
+        Company::factory()->create([
+            'type' => CompanyType::ISSUER->value,
+            'name' => 'Test Issuer Company',
+        ]);
+
+        Company::factory()->create([
+            'type' => CompanyType::CUSTOMER->value,
+            'name' => 'Test Customer Company',
+        ]);
+
+        $issuerCompany = Company::issuer()->where('name', 'Test Issuer Company')->first();
+
+        $this->assertNotNull($issuerCompany);
+        $this->assertEquals(CompanyType::ISSUER->value, $issuerCompany->type->value);
+        $this->assertEquals('Test Issuer Company', $issuerCompany->name);
+
+        $customerCompany = Company::issuer()->where('name', 'Test Customer Company')->first();
+        $this->assertNull($customerCompany);
+    }
+
+    /**
+     * Test customer scope can be combined with other query methods
+     */
+    public function test_customer_scope_can_be_combined_with_other_queries(): void
+    {
+        Company::factory()->create([
+            'type' => CompanyType::CUSTOMER->value,
+            'name' => 'Test Customer Company',
+        ]);
+
+        Company::factory()->create([
+            'type' => CompanyType::ISSUER->value,
+            'name' => 'Test Issuer Company',
+        ]);
+
+        $customerCompany = Company::customer()->where('name', 'Test Customer Company')->first();
+
+        $this->assertNotNull($customerCompany);
+        $this->assertEquals(CompanyType::CUSTOMER->value, $customerCompany->type->value);
+        $this->assertEquals('Test Customer Company', $customerCompany->name);
+
+        $issuerCompany = Company::customer()->where('name', 'Test Issuer Company')->first();
+        $this->assertNull($issuerCompany);
     }
 }
 

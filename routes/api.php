@@ -18,11 +18,11 @@ Route::get('/health', function () {
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
-// Protected routes
+// Protected routes - require authentication
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [UserController::class, 'show']);
     Route::post('/logout', [AuthController::class, 'logout']);
 
-    // Companies routes
+    // Companies routes 
     Route::apiResource('companies', CompanyController::class);
 });

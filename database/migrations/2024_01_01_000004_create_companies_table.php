@@ -13,9 +13,10 @@ return new class extends Migration
     {
         Schema::create('companies', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->unique();
+            $table->enum('type', ['issuer', 'customer'])->default('customer');
+            $table->string('name'); // Unique constraint removed, will be handled in validation
             $table->string('legal_form')->nullable(); // SARL, SAS, SA, Auto-entrepreneur, etc.
-            $table->string('siret', 14)->nullable(); // 14 chiffres
+            $table->string('siret', 14)->nullable(); // 14 chiffres, unique constraint removed for issuer, will be handled in validation
             $table->text('address')->nullable(); // Adresse du siège social
             $table->string('zip_code', 10)->nullable(); // Code postal
             $table->string('city')->nullable();

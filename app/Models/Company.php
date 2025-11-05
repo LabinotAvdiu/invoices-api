@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CompanyType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -36,6 +37,7 @@ class Company extends Model
      * @var array<int, string>
      */
     protected $fillable = [
+        'type',
         'name',
         'legal_form',
         'siret',
@@ -56,6 +58,7 @@ class Company extends Model
      */
     protected $casts = [
         'creation_date' => 'date',
+        'type' => CompanyType::class,
     ];
 
     /**
@@ -81,6 +84,28 @@ class Company extends Model
     public function attachments()
     {
         return $this->morphMany(Attachment::class, 'model');
+    }
+
+    /**
+     * Scope a query to only include issuer companies.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeIssuer($query)
+    {
+        return $query->where('type', CompanyType::ISSUER->value);
+    }
+
+    /**
+     * Scope a query to only include customer companies.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeCustomer($query)
+    {
+        return $query->where('type', CompanyType::CUSTOMER->value);
     }
 
     /**

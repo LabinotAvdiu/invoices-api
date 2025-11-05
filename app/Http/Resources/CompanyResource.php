@@ -16,6 +16,7 @@ class CompanyResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'type' => $this->type?->value,
             'logo' => $this->whenLoaded('logo', fn () => $this->logo ? new AttachmentResource($this->logo) : null),
             'name' => $this->name,
             'legal_form' => $this->legal_form,

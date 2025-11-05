@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\CompanyType;
 use App\Models\Company;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -25,12 +26,13 @@ class CompanyFactory extends Factory
     public function definition(): array
     {
         return [
+            'type' => fake()->randomElement([CompanyType::ISSUER->value, CompanyType::CUSTOMER->value]),
             'name' => fake()->company(),
             'legal_form' => fake()->randomElement(['SARL', 'SAS', 'SA', 'Auto-entrepreneur', 'EURL', 'SNC', 'SCI']),
             'siret' => fake()->numerify('##############'), // 14 digits
-            'address' => fake()->optional()->streetAddress(),
-            'zip_code' => fake()->optional()->postcode(),
-            'city' => fake()->optional()->city(),
+            'address' => fake()->streetAddress(),
+            'zip_code' => fake()->postcode(),
+            'city' => fake()->city(),
             'country' => fake()->optional()->country(),
             'phone' => fake()->optional()->phoneNumber(),
             'email' => fake()->optional()->safeEmail(),
