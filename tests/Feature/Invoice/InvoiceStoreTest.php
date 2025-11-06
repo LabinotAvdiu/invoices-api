@@ -42,9 +42,6 @@ class InvoiceStoreTest extends TestCase
                 'customer_zip' => '75001',
                 'customer_city' => 'Paris',
                 'customer_country' => 'France',
-                'total_ht' => 1000.00,
-                'total_tva' => 200.00,
-                'total_ttc' => 1200.00,
             ]);
 
         $response->assertStatus(201)
@@ -67,9 +64,10 @@ class InvoiceStoreTest extends TestCase
             ]);
         
         $responseData = $response->json('data');
-        $this->assertEquals('1000.00', $responseData['total_ht']);
-        $this->assertEquals('200.00', $responseData['total_tva']);
-        $this->assertEquals('1200.00', $responseData['total_ttc']);
+        // Totals should be 0 by default (calculated from lines, which are empty)
+        $this->assertEquals('0.00', $responseData['total_ht']);
+        $this->assertEquals('0.00', $responseData['total_tva']);
+        $this->assertEquals('0.00', $responseData['total_ttc']);
 
         $this->assertDatabaseHas('invoices', [
             'company_id' => $this->company->id,

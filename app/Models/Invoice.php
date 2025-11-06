@@ -29,7 +29,7 @@ class Invoice extends Model
 
         static::updating(function (Invoice $invoice) {
             // When status changes from draft to sent, create a snapshot and lock the invoice
-            if ($invoice->isDirty('status')) {
+            if ($invoice->isDirty('status') && $invoice->id) {
                 $oldStatusRaw = $invoice->getOriginal('status');
                 $newStatusRaw = $invoice->status;
 
@@ -44,12 +44,17 @@ class Invoice extends Model
 
                 // If transitioning from draft to sent
                 if ($oldStatusValue === InvoiceStatus::DRAFT->value && $newStatusValue === InvoiceStatus::SENT->value) {
-                    // Get the current invoice from database (before update) to create snapshot
-                    $currentInvoice = static::with('lines')->find($invoice->id);
-                    
-                    if ($currentInvoice) {
-                        // Create snapshot with current state (still draft)
-                        $currentInvoice->createSnapshot();
+                    try {
+                        // Get the current invoice from database (before update) to create snapshot
+                        $currentInvoice = static::with('lines')->find($invoice->id);
+                        
+                        if ($currentInvoice) {
+                            // Create snapshot with current state (still draft)
+                            $currentInvoice->createSnapshot();
+                        }
+                    } catch (\Exception $e) {
+                        // Log error but don't prevent update
+                        \Log::error('Failed to create invoice snapshot: ' . $e->getMessage());
                     }
                     
                     // Lock the invoice
@@ -66,6 +71,10 @@ class Invoice extends Model
      */
     protected $attributes = [
         'status' => InvoiceStatus::DRAFT,
+        'total_ht' => 0,
+        'total_tva' => 0,
+        'total_ttc' => 0,
+        'is_locked' => false,
     ];
 
     /**
@@ -225,7 +234,7 @@ class Invoice extends Model
      */
     public function isOverdue(): bool
     {
-        if (!$this->due_date) {
+        if (!$this->due_date || !$this->status) {
             return false;
         }
 
@@ -241,7 +250,7 @@ class Invoice extends Model
      */
     public function getCustomerDisplayNameAttribute(): string
     {
-        if ($this->customer_id && $this->customer) {
+        if ($this->customer_id && $this->relationLoaded('customer') && $this->customer) {
             return $this->customer->name;
         }
 
@@ -309,7 +318,7 @@ class Invoice extends Model
                 'customer_city' => $this->customer_city,
                 'customer_country' => $this->customer_country,
                 'number' => $this->number,
-                'status' => $this->status->value,
+                'status' => $this->status?->value ?? InvoiceStatus::DRAFT->value,
                 'issue_date' => $this->issue_date?->toDateString(),
                 'due_date' => $this->due_date?->toDateString(),
                 'is_locked' => $this->is_locked,

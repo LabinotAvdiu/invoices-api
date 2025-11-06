@@ -25,11 +25,28 @@ class UpdateInvoiceRequest extends FormRequest
      */
     public function rules(): array
     {
+        $invoice = $this->route('invoice');
+        $invoiceId = $invoice instanceof Invoice ? $invoice->id : $invoice;
+        $companyId = $invoice instanceof Invoice ? $invoice->company_id : null;
 
         return [
             'customer_id' => ['sometimes', 'nullable', 'exists:companies,id'],
             
-            'customer_name' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'customer_name' => [
+                'sometimes',
+                'nullable',
+                function ($attribute, $value, $fail) use ($invoice) {
+                    $existingCustomerId = $invoice instanceof Invoice ? $invoice->customer_id : null;
+                    $requestCustomerId = $this->input('customer_id');
+                    $finalCustomerId = $requestCustomerId ?? $existingCustomerId;
+                    
+                    if (empty($value) && !$finalCustomerId) {
+                        $fail('customer_name_required');
+                    }
+                },
+                'string',
+                'max:255',
+            ],
             'customer_address' => ['sometimes', 'nullable', 'string'],
             'customer_zip' => ['sometimes', 'nullable', 'string', 'max:255'],
             'customer_city' => ['sometimes', 'nullable', 'string', 'max:255'],
@@ -44,7 +61,13 @@ class UpdateInvoiceRequest extends FormRequest
                     ->ignore($invoiceId),
             ],
             'status' => ['sometimes', Rule::enum(InvoiceStatus::class)],
-            'metadata' => ['nullable', 'array'],
+            'issue_date' => ['sometimes', 'nullable', 'date'],
+            'due_date' => ['sometimes', 'nullable', 'date', 'after_or_equal:issue_date'],
+            'is_locked' => ['sometimes', 'boolean'],
+            'total_ht' => ['sometimes', 'numeric', 'min:0'],
+            'total_tva' => ['sometimes', 'numeric', 'min:0'],
+            'total_ttc' => ['sometimes', 'numeric', 'min:0'],
+            'metadata' => ['sometimes', 'nullable', 'array'],
         ];
     }
 

@@ -39,9 +39,9 @@ class InvoiceResource extends JsonResource
             'is_overdue' => $this->isOverdue(),
             
             // Totaux
-            'total_ht' => $this->total_ht,
-            'total_tva' => $this->total_tva,
-            'total_ttc' => $this->total_ttc,
+            'total_ht' => $this->total_ht !== null ? (string) number_format((float) $this->total_ht, 2, '.', '') : null,
+            'total_tva' => $this->total_tva !== null ? (string) number_format((float) $this->total_tva, 2, '.', '') : null,
+            'total_ttc' => $this->total_ttc !== null ? (string) number_format((float) $this->total_ttc, 2, '.', '') : null,
             
             // Métadonnées
             'metadata' => $this->metadata,
