@@ -27,6 +27,8 @@ install: ## Installation complète (composer install + key-generate + migrate)
 	@docker compose up -d
 	@echo "⏳ Attente du démarrage des services (10 secondes)..."
 	@sleep 10
+	@echo "🔧 Configuration de Git..."
+	@docker compose exec app git config --global --add safe.directory /var/www/html || true
 	@echo "📦 Installation des dépendances Composer..."
 	@docker compose exec app composer install
 	@echo "🔧 Configuration des permissions..."
@@ -65,8 +67,8 @@ logs-app: ## Affiche les logs du container app
 logs-nginx: ## Affiche les logs du container nginx
 	docker compose logs -f nginx
 
-logs-mysql: ## Affiche les logs du container mysql
-	docker compose logs -f mysql
+logs-postgres: ## Affiche les logs du container postgres
+	docker compose logs -f postgres
 
 artisan: ## Exécute une commande artisan (usage: make artisan cmd="migrate:status")
 	docker compose exec app php artisan $(cmd)

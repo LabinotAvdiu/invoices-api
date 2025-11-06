@@ -12,7 +12,8 @@ RUN apt-get update && apt-get install -y \
     libxml2-dev \
     zip \
     unzip \
-    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd \
+    libpq-dev \
+    && docker-php-ext-install pdo_pgsql mbstring exif pcntl bcmath gd \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Composer
@@ -24,6 +25,10 @@ COPY . /var/www/html
 # Copy existing application directory permissions
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html
+
+# Configure Git to trust the repository directory (for Composer)
+# This prevents "dubious ownership" errors when Composer uses Git
+RUN git config --global --add safe.directory /var/www/html
 
 # Expose port 9000 and start php-fpm server
 EXPOSE 9000

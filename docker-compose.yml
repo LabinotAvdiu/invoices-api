@@ -12,7 +12,7 @@ services:
     networks:
       - invoices_network
     depends_on:
-      - mysql
+      - postgres
 
   nginx:
     image: nginx:alpine
@@ -28,27 +28,27 @@ services:
     depends_on:
       - app
 
-  mysql:
-    image: mysql:8.0
-    container_name: invoices_mysql
+  postgres:
+    image: postgres:16-alpine
+    container_name: invoices_postgres
     restart: unless-stopped
     environment:
-      MYSQL_DATABASE: invoices_db
-      MYSQL_USER: invoices_user
-      MYSQL_PASSWORD: invoices_password
-      MYSQL_ROOT_PASSWORD: root_password
+      POSTGRES_DB: invoices_db
+      POSTGRES_USER: invoices_user
+      POSTGRES_PASSWORD: invoices_password
+      PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
-      - mysql_data:/var/lib/mysql
+      - postgres_data:/var/lib/postgresql/data
     networks:
       - invoices_network
     ports:
-      - "3307:3306"
+      - "5434:5432"
 
 networks:
   invoices_network:
     driver: bridge
 
 volumes:
-  mysql_data:
+  postgres_data:
     driver: local
 
