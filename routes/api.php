@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\InvoiceLineController;
 use App\Http\Controllers\QuoteController;
 use App\Http\Controllers\QuoteLineController;
 use App\Http\Controllers\UserController;
@@ -41,6 +42,11 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // Invoices routes (imbriquées sous companies)
     Route::apiResource('companies.invoices', InvoiceController::class)
+        ->scoped()
+        ->middleware('company.access');
+    
+    // Invoice lines routes (imbriquées sous invoices)
+    Route::apiResource('companies.invoices.lines', InvoiceLineController::class)
         ->scoped()
         ->middleware('company.access');
 });
