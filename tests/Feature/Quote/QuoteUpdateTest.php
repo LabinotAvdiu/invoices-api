@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature;
+namespace Tests\Feature\Quote;
 
 use App\Enums\CompanyType;
 use App\Enums\QuoteStatus;
@@ -13,7 +13,6 @@ use Tests\TestCase;
 class QuoteUpdateTest extends TestCase
 {
     use RefreshDatabase;
-    use QuoteTestTrait;
 
     protected User $user;
     protected Company $company;

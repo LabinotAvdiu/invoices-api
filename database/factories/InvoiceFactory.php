@@ -35,8 +35,6 @@ class InvoiceFactory extends Factory
             'customer_zip' => fake()->postcode(),
             'customer_city' => fake()->city(),
             'customer_country' => fake()->country(),
-            'customer_email' => fake()->optional()->email(),
-            'customer_phone' => fake()->optional()->phoneNumber(),
             // number will be auto-generated if not provided
             'status' => InvoiceStatus::DRAFT->value,
             'issue_date' => fake()->optional()->date(),
@@ -61,8 +59,6 @@ class InvoiceFactory extends Factory
             'customer_zip' => null,
             'customer_city' => null,
             'customer_country' => null,
-            'customer_email' => null,
-            'customer_phone' => null,
         ]);
     }
 
@@ -92,8 +88,6 @@ class InvoiceFactory extends Factory
             'customer_zip' => null,
             'customer_city' => null,
             'customer_country' => null,
-            'customer_email' => null,
-            'customer_phone' => null,
         ]);
     }
 

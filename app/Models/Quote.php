@@ -29,6 +29,15 @@ class Quote extends Model
     }
 
     /**
+     * The model's default attribute values.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'status' => QuoteStatus::DRAFT,
+    ];
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var array<int, string>

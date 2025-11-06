@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
+use App\Models\Invoice;
 use App\Models\Quote;
 use App\Models\QuoteLine;
+use App\Policies\InvoicePolicy;
 use App\Policies\QuoteLinePolicy;
 use App\Policies\QuotePolicy;
 // use Illuminate\Support\Facades\Gate;
@@ -19,6 +21,7 @@ class AuthServiceProvider extends ServiceProvider
     protected $policies = [
         Quote::class => QuotePolicy::class,
         QuoteLine::class => QuoteLinePolicy::class,
+        Invoice::class => InvoicePolicy::class,
     ];
 
     /**

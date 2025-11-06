@@ -15,14 +15,6 @@ class CompanyTest extends TestCase
 {
     use RefreshDatabase;
 
-    /**
-     * Get authenticated user token for testing
-     */
-    private function getAuthToken(): string
-    {
-        $user = User::factory()->create();
-        return $user->createToken('test-token')->plainTextToken;
-    }
 
     /**
      * Test user can list companies

@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature;
+namespace Tests\Feature\Quote;
 
 use App\Enums\QuoteStatus;
 use App\Models\Company;
@@ -12,7 +12,6 @@ use Tests\TestCase;
 class QuoteDeleteTest extends TestCase
 {
     use RefreshDatabase;
-    use QuoteTestTrait;
 
     protected User $user;
     protected Company $company;
@@ -46,7 +45,8 @@ class QuoteDeleteTest extends TestCase
 
         $response->assertStatus(204);
 
-        $this->assertDatabaseMissing('quotes', [
+        // Verify soft delete (deleted_at is set)
+        $this->assertSoftDeleted('quotes', [
             'id' => $quote->id,
         ]);
     }
@@ -67,7 +67,8 @@ class QuoteDeleteTest extends TestCase
 
         $response->assertStatus(204);
 
-        $this->assertDatabaseMissing('quotes', [
+        // Verify soft delete (deleted_at is set)
+        $this->assertSoftDeleted('quotes', [
             'id' => $quote->id,
         ]);
     }

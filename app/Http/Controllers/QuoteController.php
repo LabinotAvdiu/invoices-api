@@ -39,11 +39,6 @@ class QuoteController extends Controller
         
         // Force company_id from route parameter (ignore any company_id in request)
         $validated['company_id'] = $company->id;
-        
-        // Set default status to draft if not provided
-        if (!isset($validated['status'])) {
-            $validated['status'] = QuoteStatus::DRAFT;
-        }
 
         $quote = Quote::create($validated);
         $quote->load(['customer']);

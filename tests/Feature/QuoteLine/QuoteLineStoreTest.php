@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature;
+namespace Tests\Feature\QuoteLine;
 
 use App\Enums\CompanyType;
 use App\Enums\QuoteStatus;
@@ -14,7 +14,6 @@ use Tests\TestCase;
 class QuoteLineStoreTest extends TestCase
 {
     use RefreshDatabase;
-    use QuoteTestTrait;
 
     protected User $user;
     protected Company $company;
