@@ -43,7 +43,7 @@ class QuoteUpdateTest extends TestCase
             'total_ht' => 1000.00,
         ]);
 
-        $response = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+        $response = $this->authenticated($this->token)
             ->patchJson(route('companies.quotes.update', [$this->company->id, $quote->id]), [
                 'number' => 'D-2025-0005',
                 'customer_name' => $quote->customer_name ?? 'Test Customer',
@@ -81,7 +81,7 @@ class QuoteUpdateTest extends TestCase
             'number' => 'D-2025-0006',
         ]);
 
-        $response = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+        $response = $this->authenticated($this->token)
             ->patchJson(route('companies.quotes.update', [$this->company->id, $quote->id]), [
                 'number' => 'D-2025-0006',
                 'customer_name' => $quote->customer_name ?? 'Test Customer',
@@ -108,7 +108,7 @@ class QuoteUpdateTest extends TestCase
             'number' => 'D-2025-0007',
         ]);
 
-        $response = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+        $response = $this->authenticated($this->token)
             ->patchJson(route('companies.quotes.update', [$this->company->id, $quote->id]), [
                 'number' => 'D-2025-0007',
                 'customer_name' => $quote->customer_name ?? 'Test Customer',
@@ -138,7 +138,7 @@ class QuoteUpdateTest extends TestCase
             'number' => 'D-2025-0008',
         ]);
 
-        $response = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+        $response = $this->authenticated($this->token)
             ->patchJson(route('companies.quotes.update', [$this->company->id, $quote->id]), [
                 'number' => 'D-2025-0008',
                 'customer_name' => $quote->customer_name ?? 'Test Customer',
@@ -168,7 +168,7 @@ class QuoteUpdateTest extends TestCase
             'number' => 'D-2025-0009',
         ]);
 
-        $response = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+        $response = $this->authenticated($this->token)
             ->patchJson(route('companies.quotes.update', [$this->company->id, $quote->id]), [
                 'number' => 'D-2025-0009',
                 'customer_name' => $quote->customer_name ?? 'Test Customer',
@@ -213,7 +213,7 @@ class QuoteUpdateTest extends TestCase
         $originalCustomerId = $quote->customer_id;
 
         // Update only status - customer_id is preserved automatically
-        $response = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+        $response = $this->authenticated($this->token)
             ->patchJson(route('companies.quotes.update', [$this->company->id, $quote->id]), [
                 'status' => QuoteStatus::SENT->value,
             ]);
@@ -240,6 +240,52 @@ class QuoteUpdateTest extends TestCase
         
         // Verify customer_id didn't change
         $this->assertEquals($originalCustomerId, $quote->customer_id);
+    }
+
+    /**
+     * Test customer information is automatically filled when customer_id is updated
+     */
+    public function test_customer_information_is_automatically_filled_when_customer_id_is_updated(): void
+    {
+        $customer1 = Company::factory()->create([
+            'type' => CompanyType::CUSTOMER->value,
+            'name' => 'Original Customer',
+        ]);
+
+        $customer2 = Company::factory()->create([
+            'type' => CompanyType::CUSTOMER->value,
+            'name' => 'New Customer Company',
+            'address' => '456 New Street',
+            'zip_code' => '75002',
+            'city' => 'Lyon',
+            'country' => 'France',
+        ]);
+
+        $quote = Quote::factory()->create([
+            'company_id' => $this->company->id,
+            'customer_id' => $customer1->id,
+            'status' => QuoteStatus::DRAFT->value,
+            'number' => 'D-2025-UPDATE-CUSTOMER',
+        ]);
+
+        $response = $this->authenticated($this->token)
+            ->patchJson(route('companies.quotes.update', [$this->company->id, $quote->id]), [
+                'customer_id' => $customer2->id,
+                // Don't provide customer_name, customer_address, etc. - they should be filled automatically
+            ]);
+
+        $response->assertStatus(200);
+
+        // Verify that customer information was automatically updated
+        $this->assertDatabaseHas('quotes', [
+            'id' => $quote->id,
+            'customer_id' => $customer2->id,
+            'customer_name' => 'New Customer Company',
+            'customer_address' => '456 New Street',
+            'customer_zip' => '75002',
+            'customer_city' => 'Lyon',
+            'customer_country' => 'France',
+        ]);
     }
 
     /**

@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\QuoteStatus;
+use App\Models\Company;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -55,6 +56,28 @@ class StoreQuoteRequest extends FormRequest
             // Métadonnées
             'metadata' => ['nullable', 'array'],
         ];
+    }
+
+    /**
+     * Prepare the data for validation.
+     * If customer_id is provided, automatically fill customer information from the company.
+     * The customer information always takes priority over manual input.
+     */
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('customer_id') && $this->customer_id) {
+            $customer = Company::find($this->customer_id);
+            
+            if ($customer) {
+                $this->merge([
+                    'customer_name' => $customer->name,
+                    'customer_address' => $customer->address,
+                    'customer_zip' => $customer->zip_code,
+                    'customer_city' => $customer->city,
+                    'customer_country' => $customer->country,
+                ]);
+            }
+        }
     }
 
     /**

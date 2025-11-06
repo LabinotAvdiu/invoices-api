@@ -15,17 +15,29 @@ class QuoteStoreTest extends TestCase
     use RefreshDatabase;
     use QuoteTestTrait;
 
+    protected User $user;
+    protected Company $company;
+    protected string $token;
+
+    /**
+     * Set up the test environment before each test.
+     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+        
+        $this->user = User::factory()->create();
+        $this->company = $this->createIssuerCompanyWithUser($this->user);
+        $this->token = $this->getAuthToken($this->user);
+    }
+
     /**
      * Test user can create a quote with required fields
      */
     public function test_user_can_create_quote_with_required_fields(): void
     {
-        $user = User::factory()->create();
-        $company = $this->createIssuerCompanyWithUser($user);
-        $token = $this->getAuthToken($user);
-
-        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
-            ->postJson("/api/companies/{$company->id}/quotes", [
+        $response = $this->authenticated($this->token)
+            ->postJson(route('companies.quotes.store', [$this->company->id]), [
                 'number' => 'D-2025-0001',
                 'customer_name' => 'Test Customer',
                 'customer_address' => '123 Test Street',
@@ -51,7 +63,7 @@ class QuoteStoreTest extends TestCase
             ])
             ->assertJson([
                 'data' => [
-                    'company_id' => $company->id,
+                    'company_id' => $this->company->id,
                     'number' => 'D-2025-0001',
                     'status' => QuoteStatus::DRAFT->value,
                 ],
@@ -63,7 +75,7 @@ class QuoteStoreTest extends TestCase
         $this->assertEquals('1200.00', $responseData['total_ttc']);
 
         $this->assertDatabaseHas('quotes', [
-            'company_id' => $company->id,
+            'company_id' => $this->company->id,
             'number' => 'D-2025-0001',
             'status' => QuoteStatus::DRAFT->value,
         ]);
@@ -74,15 +86,12 @@ class QuoteStoreTest extends TestCase
      */
     public function test_user_can_create_quote_with_registered_customer(): void
     {
-        $user = User::factory()->create();
-        $company = $this->createIssuerCompanyWithUser($user);
         $customer = Company::factory()->create([
             'type' => CompanyType::CUSTOMER->value,
         ]);
-        $token = $this->getAuthToken($user);
 
-        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
-            ->postJson("/api/companies/{$company->id}/quotes", [
+        $response = $this->authenticated($this->token)
+            ->postJson(route('companies.quotes.store', [$this->company->id]), [
                 'number' => 'D-2025-0002',
                 'customer_id' => $customer->id,
                 'total_ht' => 1500.00,
@@ -93,14 +102,14 @@ class QuoteStoreTest extends TestCase
         $response->assertStatus(201)
             ->assertJson([
                 'data' => [
-                    'company_id' => $company->id,
+                    'company_id' => $this->company->id,
                     'customer_id' => $customer->id,
                     'number' => 'D-2025-0002',
                 ],
             ]);
 
         $this->assertDatabaseHas('quotes', [
-            'company_id' => $company->id,
+            'company_id' => $this->company->id,
             'customer_id' => $customer->id,
             'number' => 'D-2025-0002',
         ]);
@@ -111,15 +120,12 @@ class QuoteStoreTest extends TestCase
      */
     public function test_company_id_is_forced_from_route(): void
     {
-        $user = User::factory()->create();
-        $company = $this->createIssuerCompanyWithUser($user);
         $otherCompany = Company::factory()->create([
             'type' => CompanyType::ISSUER->value,
         ]);
-        $token = $this->getAuthToken($user);
 
-        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
-            ->postJson("/api/companies/{$company->id}/quotes", [
+        $response = $this->authenticated($this->token)
+            ->postJson(route('companies.quotes.store', [$this->company->id]), [
                 'number' => 'D-2025-0003',
                 'company_id' => $otherCompany->id, // Should be ignored
                 'customer_name' => 'Test Customer',
@@ -135,7 +141,7 @@ class QuoteStoreTest extends TestCase
         $response->assertStatus(201);
 
         $this->assertDatabaseHas('quotes', [
-            'company_id' => $company->id, // Should use company from route
+            'company_id' => $this->company->id, // Should use company from route
             'number' => 'D-2025-0003',
         ]);
 
@@ -150,12 +156,8 @@ class QuoteStoreTest extends TestCase
      */
     public function test_creation_requires_number(): void
     {
-        $user = User::factory()->create();
-        $company = $this->createIssuerCompanyWithUser($user);
-        $token = $this->getAuthToken($user);
-
-        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
-            ->postJson("/api/companies/{$company->id}/quotes", [
+        $response = $this->authenticated($this->token)
+            ->postJson(route('companies.quotes.store', [$this->company->id]), [
                 'customer_name' => 'Test Customer',
                 'total_ht' => 1000.00,
                 'total_tva' => 200.00,
@@ -171,12 +173,8 @@ class QuoteStoreTest extends TestCase
      */
     public function test_creation_can_work_without_totals(): void
     {
-        $user = User::factory()->create();
-        $company = $this->createIssuerCompanyWithUser($user);
-        $token = $this->getAuthToken($user);
-
-        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
-            ->postJson("/api/companies/{$company->id}/quotes", [
+        $response = $this->authenticated($this->token)
+            ->postJson(route('companies.quotes.store', [$this->company->id]), [
                 'number' => 'D-2025-0010',
                 'customer_name' => 'Test Customer',
                 'customer_address' => '123 Test St',
@@ -200,21 +198,18 @@ class QuoteStoreTest extends TestCase
      */
     public function test_number_must_be_unique_per_customer(): void
     {
-        $user = User::factory()->create();
-        $company = $this->createIssuerCompanyWithUser($user);
         $customer = Company::factory()->create([
             'type' => CompanyType::CUSTOMER->value,
         ]);
-        $token = $this->getAuthToken($user);
 
         Quote::factory()->create([
-            'company_id' => $company->id,
+            'company_id' => $this->company->id,
             'customer_id' => $customer->id,
             'number' => 'D-2025-0011',
         ]);
 
-        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
-            ->postJson("/api/companies/{$company->id}/quotes", [
+        $response = $this->authenticated($this->token)
+            ->postJson(route('companies.quotes.store', [$this->company->id]), [
                 'number' => 'D-2025-0011',
                 'customer_id' => $customer->id,
                 'total_ht' => 1000.00,
@@ -227,15 +222,47 @@ class QuoteStoreTest extends TestCase
     }
 
     /**
+     * Test customer information is automatically filled when customer_id is provided
+     */
+    public function test_customer_information_is_automatically_filled_from_customer_id(): void
+    {
+        $customer = Company::factory()->create([
+            'type' => CompanyType::CUSTOMER->value,
+            'name' => 'Test Customer Company',
+            'address' => '123 Test Street',
+            'zip_code' => '75001',
+            'city' => 'Paris',
+            'country' => 'France',
+        ]);
+
+        $response = $this->authenticated($this->token)
+            ->postJson(route('companies.quotes.store', [$this->company->id]), [
+                'number' => 'D-2025-AUTO-FILL',
+                'customer_id' => $customer->id,
+                // Don't provide customer_name, customer_address, etc. - they should be filled automatically
+            ]);
+
+        $response->assertStatus(201);
+
+        // Verify that customer information was automatically filled
+        $this->assertDatabaseHas('quotes', [
+            'company_id' => $this->company->id,
+            'customer_id' => $customer->id,
+            'number' => 'D-2025-AUTO-FILL',
+            'customer_name' => 'Test Customer Company',
+            'customer_address' => '123 Test Street',
+            'customer_zip' => '75001',
+            'customer_city' => 'Paris',
+            'customer_country' => 'France',
+        ]);
+    }
+
+    /**
      * Test quotes require authentication for creation
      */
     public function test_quotes_require_authentication_for_creation(): void
     {
-        $company = Company::factory()->create([
-            'type' => CompanyType::ISSUER->value,
-        ]);
-
-        $response = $this->postJson("/api/companies/{$company->id}/quotes", []);
+        $response = $this->postJson(route('companies.quotes.store', [$this->company->id]), []);
         $response->assertStatus(401);
     }
 }

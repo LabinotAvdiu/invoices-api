@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\CompanyType;
 use App\Enums\QuoteStatus;
 use App\Models\Company;
 use App\Models\Quote;
@@ -67,6 +68,23 @@ class QuoteFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'status' => $status->value,
+        ]);
+    }
+
+    /**
+     * Indicate that the quote has a registered customer company (type CUSTOMER).
+     */
+    public function withCustomerCompany(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'customer_id' => Company::factory()->create([
+                'type' => CompanyType::CUSTOMER->value,
+            ])->id,
+            'customer_name' => null,
+            'customer_address' => null,
+            'customer_zip' => null,
+            'customer_city' => null,
+            'customer_country' => null,
         ]);
     }
 }

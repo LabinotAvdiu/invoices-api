@@ -168,4 +168,22 @@ class Quote extends Model
 
         return $this->customer_name ?? 'Client non enregistré';
     }
+
+    /**
+     * Calculate totals from all quote lines.
+     * Sums up total_ht, total_tax (as total_tva), and total_ttc from all lines.
+     * Always reloads lines from database to ensure accuracy.
+     *
+     * @return void
+     */
+    public function calculateTotals(): void
+    {
+        // Always reload lines from database to ensure we have the latest data
+        $lines = $this->lines()->get();
+        
+        // Sum all totals from lines
+        $this->total_ht = round($lines->sum('total_ht'), 2);
+        $this->total_tva = round($lines->sum('total_tax'), 2); // total_tax in lines = total_tva in quote
+        $this->total_ttc = round($lines->sum('total_ttc'), 2);
+    }
 }

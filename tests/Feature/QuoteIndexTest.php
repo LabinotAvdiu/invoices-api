@@ -14,22 +14,34 @@ class QuoteIndexTest extends TestCase
     use RefreshDatabase;
     use QuoteTestTrait;
 
+    protected User $user;
+    protected Company $company;
+    protected string $token;
+
+    /**
+     * Set up the test environment before each test.
+     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+        
+        $this->user = User::factory()->create();
+        $this->company = $this->createIssuerCompanyWithUser($this->user);
+        $this->token = $this->getAuthToken($this->user);
+    }
+
     /**
      * Test user can list quotes for a company
      */
     public function test_user_can_list_quotes(): void
     {
-        $user = User::factory()->create();
-        $company = $this->createIssuerCompanyWithUser($user);
-        $token = $this->getAuthToken($user);
-
         Quote::factory()->count(3)->create([
-            'company_id' => $company->id,
+            'company_id' => $this->company->id,
             'number' => fn() => 'D-2025-' . str_pad((string)rand(1, 9999), 4, '0', STR_PAD_LEFT),
         ]);
 
-        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
-            ->getJson("/api/companies/{$company->id}/quotes");
+        $response = $this->authenticated($this->token)
+            ->getJson(route('companies.quotes.index', [$this->company->id]));
 
         $response->assertStatus(200)
             ->assertJsonStructure([
@@ -58,17 +70,13 @@ class QuoteIndexTest extends TestCase
      */
     public function test_user_can_view_quote(): void
     {
-        $user = User::factory()->create();
-        $company = $this->createIssuerCompanyWithUser($user);
-        $token = $this->getAuthToken($user);
-
         $quote = Quote::factory()->create([
-            'company_id' => $company->id,
+            'company_id' => $this->company->id,
             'number' => 'D-2025-0004',
         ]);
 
-        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
-            ->getJson("/api/companies/{$company->id}/quotes/{$quote->id}");
+        $response = $this->authenticated($this->token)
+            ->getJson(route('companies.quotes.show', [$this->company->id, $quote->id]));
 
         $response->assertStatus(200)
             ->assertJsonStructure([
@@ -82,7 +90,7 @@ class QuoteIndexTest extends TestCase
             ->assertJson([
                 'data' => [
                     'id' => $quote->id,
-                    'company_id' => $company->id,
+                    'company_id' => $this->company->id,
                     'number' => 'D-2025-0004',
                 ],
             ]);
@@ -93,18 +101,14 @@ class QuoteIndexTest extends TestCase
      */
     public function test_quotes_require_authentication(): void
     {
-        $company = Company::factory()->create([
-            'type' => CompanyType::ISSUER->value,
-        ]);
-
-        $response = $this->getJson("/api/companies/{$company->id}/quotes");
+        $response = $this->getJson(route('companies.quotes.index', [$this->company->id]));
         $response->assertStatus(401);
 
         $quote = Quote::factory()->create([
-            'company_id' => $company->id,
+            'company_id' => $this->company->id,
             'number' => 'D-2025-TEST-AUTH',
         ]);
-        $response = $this->getJson("/api/companies/{$company->id}/quotes/{$quote->id}");
+        $response = $this->getJson(route('companies.quotes.show', [$this->company->id, $quote->id]));
         $response->assertStatus(401);
     }
 
@@ -123,8 +127,8 @@ class QuoteIndexTest extends TestCase
 
         $token = $this->getAuthToken($user);
 
-        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
-            ->getJson("/api/companies/{$company->id}/quotes");
+        $response = $this->authenticated($token)
+            ->getJson(route('companies.quotes.index', [$company->id]));
 
         $response->assertStatus(403)
             ->assertJson([
@@ -145,8 +149,8 @@ class QuoteIndexTest extends TestCase
 
         $token = $this->getAuthToken($user);
 
-        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
-            ->getJson("/api/companies/{$company->id}/quotes");
+        $response = $this->authenticated($token)
+            ->getJson(route('companies.quotes.index', [$company->id]));
 
         $response->assertStatus(403)
             ->assertJson([
@@ -174,8 +178,8 @@ class QuoteIndexTest extends TestCase
         $token = $this->getAuthToken($user);
 
         // Try to access quote from company2 via company1 route
-        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
-            ->getJson("/api/companies/{$company1->id}/quotes/{$quote->id}");
+        $response = $this->authenticated($token)
+            ->getJson(route('companies.quotes.show', [$company1->id, $quote->id]));
 
         $response->assertStatus(404);
     }

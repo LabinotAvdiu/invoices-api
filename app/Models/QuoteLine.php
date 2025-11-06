@@ -57,8 +57,8 @@ class QuoteLine extends Model
      */
     public function calculateTotals(): void
     {
-        $this->total_ht = $this->quantity * $this->unit_price;
-        $this->total_tax = $this->total_ht * ($this->tva_rate / 100);
-        $this->total_ttc = $this->total_ht + $this->total_tax;
+        $this->total_ht = round($this->quantity * $this->unit_price, 2);
+        $this->total_tax = round($this->total_ht * ($this->tva_rate / 100), 2);
+        $this->total_ttc = round($this->total_ht + $this->total_tax, 2);
     }
 }
