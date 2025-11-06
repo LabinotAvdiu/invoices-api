@@ -6,6 +6,7 @@ use App\Enums\QuoteStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Quote extends Model
 {
@@ -63,6 +64,14 @@ class Quote extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Company::class, 'customer_id');
+    }
+
+    /**
+     * Get the quote lines for this quote.
+     */
+    public function lines(): HasMany
+    {
+        return $this->hasMany(QuoteLine::class);
     }
 
     /**
