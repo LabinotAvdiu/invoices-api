@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\QuoteController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -25,4 +26,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Companies routes 
     Route::apiResource('companies', CompanyController::class);
+    
+    // Quotes routes (imbriquées sous companies)
+    Route::apiResource('companies.quotes', QuoteController::class)
+        ->scoped()
+        ->middleware('company.access');
 });

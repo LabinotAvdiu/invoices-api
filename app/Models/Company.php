@@ -87,6 +87,14 @@ class Company extends Model
     }
 
     /**
+     * Get all quotes issued by this company (as issuer).
+     * This is the main relationship used by scoped routes.
+     */
+    public function quotes()
+    {
+        return $this->hasMany(Quote::class, 'company_id');
+    }
+    /**
      * Scope a query to only include issuer companies.
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
