@@ -3,22 +3,22 @@
 namespace Database\Factories;
 
 use App\Enums\CompanyType;
-use App\Enums\QuoteStatus;
+use App\Enums\InvoiceStatus;
 use App\Models\Company;
-use App\Models\Quote;
+use App\Models\Invoice;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Quote>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Invoice>
  */
-class QuoteFactory extends Factory
+class InvoiceFactory extends Factory
 {
     /**
      * The name of the factory's corresponding model.
      *
      * @var string
      */
-    protected $model = Quote::class;
+    protected $model = Invoice::class;
 
     /**
      * Define the model's default state.
@@ -35,10 +35,13 @@ class QuoteFactory extends Factory
             'customer_zip' => fake()->postcode(),
             'customer_city' => fake()->city(),
             'customer_country' => fake()->country(),
+            'customer_email' => fake()->optional()->email(),
+            'customer_phone' => fake()->optional()->phoneNumber(),
             // number will be auto-generated if not provided
-            'status' => QuoteStatus::DRAFT->value,
+            'status' => InvoiceStatus::DRAFT->value,
             'issue_date' => fake()->optional()->date(),
-            'valid_until' => fake()->optional()->date(),
+            'due_date' => fake()->optional()->date(),
+            'is_locked' => false,
             'total_ht' => fake()->randomFloat(2, 100, 10000),
             'total_tva' => fake()->randomFloat(2, 10, 2000),
             'total_ttc' => fake()->randomFloat(2, 110, 12000),
@@ -47,7 +50,7 @@ class QuoteFactory extends Factory
     }
 
     /**
-     * Indicate that the quote has a registered customer.
+     * Indicate that the invoice has a registered customer.
      */
     public function withCustomer(): static
     {
@@ -58,21 +61,25 @@ class QuoteFactory extends Factory
             'customer_zip' => null,
             'customer_city' => null,
             'customer_country' => null,
+            'customer_email' => null,
+            'customer_phone' => null,
         ]);
     }
 
     /**
-     * Indicate that the quote has a specific status.
+     * Indicate that the invoice has a specific status.
      */
-    public function withStatus(QuoteStatus $status): static
+    public function withStatus(InvoiceStatus $status): static
     {
         return $this->state(fn (array $attributes) => [
             'status' => $status->value,
+            // Auto-lock if sent or paid
+            'is_locked' => in_array($status, [InvoiceStatus::SENT, InvoiceStatus::PAID]),
         ]);
     }
 
     /**
-     * Indicate that the quote has a registered customer company (type CUSTOMER).
+     * Indicate that the invoice has a registered customer company (type CUSTOMER).
      */
     public function withCustomerCompany(): static
     {
@@ -85,6 +92,29 @@ class QuoteFactory extends Factory
             'customer_zip' => null,
             'customer_city' => null,
             'customer_country' => null,
+            'customer_email' => null,
+            'customer_phone' => null,
+        ]);
+    }
+
+    /**
+     * Indicate that the invoice is locked.
+     */
+    public function locked(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_locked' => true,
+        ]);
+    }
+
+    /**
+     * Indicate that the invoice is unlocked.
+     */
+    public function unlocked(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_locked' => false,
         ]);
     }
 }
+

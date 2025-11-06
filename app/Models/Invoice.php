@@ -2,14 +2,13 @@
 
 namespace App\Models;
 
-use App\Enums\QuoteStatus;
+use App\Enums\InvoiceStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Quote extends Model
+class Invoice extends Model
 {
     use HasFactory, SoftDeletes;
 
@@ -20,10 +19,10 @@ class Quote extends Model
     {
         parent::boot();
 
-        static::creating(function (Quote $quote) {
+        static::creating(function (Invoice $invoice) {
             // Generate number automatically if not provided
-            if (empty($quote->number)) {
-                $quote->number = static::generateNumber($quote->company_id);
+            if (empty($invoice->number)) {
+                $invoice->number = static::generateNumber($invoice->company_id);
             }
         });
     }
@@ -41,10 +40,13 @@ class Quote extends Model
         'customer_zip',
         'customer_city',
         'customer_country',
+        'customer_email',
+        'customer_phone',
         'number',
         'status',
         'issue_date',
-        'valid_until',
+        'due_date',
+        'is_locked',
         'total_ht',
         'total_tva',
         'total_ttc',
@@ -57,9 +59,10 @@ class Quote extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'status' => QuoteStatus::class,
+        'status' => InvoiceStatus::class,
         'issue_date' => 'date',
-        'valid_until' => 'date',
+        'due_date' => 'date',
+        'is_locked' => 'boolean',
         'total_ht' => 'decimal:2',
         'total_tva' => 'decimal:2',
         'total_ttc' => 'decimal:2',
@@ -67,7 +70,7 @@ class Quote extends Model
     ];
 
     /**
-     * Get the company that issued this quote (émetteur).
+     * Get the company that issued this invoice (émetteur).
      */
     public function company(): BelongsTo
     {
@@ -83,92 +86,97 @@ class Quote extends Model
     }
 
     /**
-     * Get the quote lines for this quote.
-     */
-    public function lines(): HasMany
-    {
-        return $this->hasMany(QuoteLine::class);
-    }
-
-    /**
-     * Scope a query to only include quotes with a specific status.
+     * Scope a query to only include invoices with a specific status.
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param QuoteStatus $status
+     * @param InvoiceStatus $status
      * @return \Illuminate\Database\Eloquent\Builder
      */
-    public function scopeStatus($query, QuoteStatus $status)
+    public function scopeStatus($query, InvoiceStatus $status)
     {
         return $query->where('status', $status->value);
     }
 
     /**
-     * Scope a query to only include draft quotes.
+     * Scope a query to only include draft invoices.
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeDraft($query)
     {
-        return $query->where('status', QuoteStatus::DRAFT->value);
+        return $query->where('status', InvoiceStatus::DRAFT->value);
     }
 
     /**
-     * Scope a query to only include sent quotes.
+     * Scope a query to only include sent invoices.
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeSent($query)
     {
-        return $query->where('status', QuoteStatus::SENT->value);
+        return $query->where('status', InvoiceStatus::SENT->value);
     }
 
     /**
-     * Scope a query to only include accepted quotes.
+     * Scope a query to only include paid invoices.
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
-    public function scopeAccepted($query)
+    public function scopePaid($query)
     {
-        return $query->where('status', QuoteStatus::ACCEPTED->value);
+        return $query->where('status', InvoiceStatus::PAID->value);
     }
 
     /**
-     * Scope a query to only include rejected quotes.
+     * Scope a query to only include canceled invoices.
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
-    public function scopeRejected($query)
+    public function scopeCanceled($query)
     {
-        return $query->where('status', QuoteStatus::REJECTED->value);
+        return $query->where('status', InvoiceStatus::CANCELED->value);
     }
 
     /**
-     * Scope a query to only include expired quotes.
+     * Scope a query to only include locked invoices.
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
-    public function scopeExpired($query)
+    public function scopeLocked($query)
     {
-        return $query->where('status', QuoteStatus::EXPIRED->value);
+        return $query->where('is_locked', true);
     }
 
     /**
-     * Check if the quote is expired based on valid_until date.
+     * Scope a query to only include unlocked invoices.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeUnlocked($query)
+    {
+        return $query->where('is_locked', false);
+    }
+
+    /**
+     * Check if the invoice is overdue based on due_date.
      *
      * @return bool
      */
-    public function isExpired(): bool
+    public function isOverdue(): bool
     {
-        if (!$this->valid_until) {
+        if (!$this->due_date) {
             return false;
         }
 
-        return $this->valid_until->isPast() && $this->status !== QuoteStatus::EXPIRED;
+        return $this->due_date->isPast() 
+            && $this->status !== InvoiceStatus::PAID 
+            && $this->status !== InvoiceStatus::CANCELED;
     }
 
     /**
@@ -186,26 +194,28 @@ class Quote extends Model
     }
 
     /**
-     * Calculate totals from all quote lines.
-     * Sums up total_ht, total_tax (as total_tva), and total_ttc from all lines.
-     * Always reloads lines from database to ensure accuracy.
+     * Lock the invoice (prevent modifications).
      *
      * @return void
      */
-    public function calculateTotals(): void
+    public function lock(): void
     {
-        // Always reload lines from database to ensure we have the latest data
-        $lines = $this->lines()->get();
-        
-        // Sum all totals from lines
-        $this->total_ht = round($lines->sum('total_ht'), 2);
-        $this->total_tva = round($lines->sum('total_tax'), 2); // total_tax in lines = total_tva in quote
-        $this->total_ttc = round($lines->sum('total_ttc'), 2);
+        $this->update(['is_locked' => true]);
     }
 
     /**
-     * Generate a unique quote number for the given company.
-     * Format: D-YYYY-NNNN (e.g., D-2025-0012)
+     * Unlock the invoice (allow modifications).
+     *
+     * @return void
+     */
+    public function unlock(): void
+    {
+        $this->update(['is_locked' => false]);
+    }
+
+    /**
+     * Generate a unique invoice number for the given company.
+     * Format: F-YYYY-NNNN (e.g., F-2025-0143)
      *
      * @param int $companyId
      * @return string
@@ -213,18 +223,18 @@ class Quote extends Model
     public static function generateNumber(int $companyId): string
     {
         $year = now()->year;
-        $prefix = "D-{$year}-";
+        $prefix = "F-{$year}-";
 
-        // Find all quote numbers for this company and year
-        $quotes = static::where('company_id', $companyId)
+        // Find all invoice numbers for this company and year
+        $invoices = static::where('company_id', $companyId)
             ->where('number', 'like', $prefix . '%')
             ->pluck('number')
             ->toArray();
 
         $maxNumber = 0;
-        foreach ($quotes as $quoteNumber) {
-            // Extract the number part (after D-YYYY-)
-            if (preg_match('/' . preg_quote($prefix, '/') . '(\d+)/', $quoteNumber, $matches)) {
+        foreach ($invoices as $invoiceNumber) {
+            // Extract the number part (after F-YYYY-)
+            if (preg_match('/' . preg_quote($prefix, '/') . '(\d+)/', $invoiceNumber, $matches)) {
                 $number = (int) $matches[1];
                 if ($number > $maxNumber) {
                     $maxNumber = $number;
@@ -237,3 +247,4 @@ class Quote extends Model
         return $prefix . str_pad((string) $nextNumber, 4, '0', STR_PAD_LEFT);
     }
 }
+

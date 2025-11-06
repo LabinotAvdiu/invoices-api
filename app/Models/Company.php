@@ -94,6 +94,16 @@ class Company extends Model
     {
         return $this->hasMany(Quote::class, 'company_id');
     }
+
+    /**
+     * Get all invoices issued by this company (as issuer).
+     * This is the main relationship used by scoped routes.
+     */
+    public function invoices()
+    {
+        return $this->hasMany(Invoice::class, 'company_id');
+    }
+
     /**
      * Scope a query to only include issuer companies.
      *
